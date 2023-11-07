@@ -1,56 +1,90 @@
-import { VStack, Image, Text, Box, Link, Checkbox, ScrollView } from 'native-base'
-import { useState } from 'react';
-import { TouchableOpacity } from 'react-native';
-import Logo from './assets/Logo.png'
+import React, { useState } from 'react';
+import { Box, ScrollView, Image, Input, Button, VStack, FormControl, Text } from 'native-base';
+import Logo from '../src/assets/Logo.png';
+import { useNavigation } from '@react-navigation/native';
 import { Botao } from './componentes/Botao';
-import { EntradaTexto } from './componentes/EntradaTexto';
-import { Titulo } from './componentes/Titulo';
-import { secoes } from './utils/CadastroEntradaTexto';
 
 export default function Cadastro() {
-  const [numSecao, setNumSecao] = useState(0);
-  
+   
+  const navigation = useNavigation();
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [role, setRole] = useState('');
+  const [nome, setNome] = useState('');
 
-  function avancarSecao(){
-    if(numSecao < secoes.length - 1){
-      setNumSecao(numSecao+1)
-    }
+  function voltarParaMenu() {
+    navigation.goBack();
   }
 
-  function voltarSecao(){
-    if(numSecao > 0){
-      setNumSecao(numSecao - 1)
-    }
-  }
+  function handleCadastro() {
+    const registro = {
+      email,
+      senha,
+      cpf,
+      role,
+      nome
+    };
+   // URL of the API endpoint
+  const apiURL = 'http://192.168.0.145:7131/api/AdicionaUsuario';
+
+  fetch(apiURL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(registro),
+  })
+  .then(response => {
+    // You should check for response.ok or response.status here
+    // to ensure the request was successful.
+    return response.json();
+  })
+  .then(data => {
+    // Handle the response data
+    console.log('Success:', data);
+    // Navigate to another screen or show success message
+  })
+  .catch((error) => {
+    // Handle any errors
+    console.error('Error:', error);
+    // Show error message or handle error state
+  });
+}
 
   return (
     <ScrollView flex={1} p={5}>
       <Image source={Logo} alt="Logo Voll" alignSelf="center" />
 
-      <Titulo>
-        {secoes[numSecao].titulo}
-      </Titulo>
-      <Box>
-        {
-          secoes[numSecao]?.entradaTexto?.map(entrada => {
-            return <EntradaTexto label={entrada.label} placeholder={entrada.placeholder} key={entrada.id} />
-          })
-        }
-      </Box>
-      <Box>
-        <Text color="blue.800" fontWeight="bold" fontSize="md" mt="2" mb={2}>
-          Selecione o plano:
+      <VStack space={4}>
+        <Text fontSize="xl" bold textAlign="center">
+          Cadastro
         </Text>
-        {
-          secoes[numSecao].checkbox.map(checkbox => {
-            return <Checkbox key={checkbox.id} value={checkbox.value}>
-              {checkbox.value}
-            </Checkbox>
-          })
-        }
-      </Box>
-      {numSecao > 0 && <Botao onPress={() => voltarSecao()} bgColor="gray.400">Voltar</Botao>}
-      <Botao onPress={() => avancarSecao()} mt={4} mb={20}>Avançar</Botao>
+        <FormControl>
+          <FormControl.Label>Nome Completo</FormControl.Label>
+          <Input placeholder="Digite seu nome completo" onChangeText={setNome} />
+        </FormControl>
+        <FormControl>
+          <FormControl.Label>Email</FormControl.Label>
+          <Input placeholder="Digite seu email" onChangeText={setEmail} />
+        </FormControl>
+        <FormControl>
+          <FormControl.Label>Senha</FormControl.Label>
+          <Input type="password" placeholder="Crie uma senha" onChangeText={setSenha} />
+        </FormControl>
+        <FormControl>
+          <FormControl.Label>CPF</FormControl.Label>
+          <Input placeholder="Digite seu CPF" onChangeText={setCpf} />
+        </FormControl>
+        <FormControl>
+          <FormControl.Label>Role</FormControl.Label>
+          <Input placeholder="Digite seu role" onChangeText={setRole} />
+        </FormControl>
+
+        <Botao onPress={handleCadastro} mt={4} mb={20}>
+          Cadastrar
+        </Botao>  
+      </VStack>
     </ScrollView>
   );
 }
