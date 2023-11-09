@@ -35,18 +35,50 @@ export default function Login({ navigation }: any) {
   const handleTogglePassword = () => {
     setShowPassword(!showPassword);
   };
+  const logout = async () => {
+    await AsyncStorage.removeItem('token'); // Remove the token from storage
+    // Navigate to the login screen or another appropriate screen
+    navigation.replace('Login'); // Use 'Login' or the route name you have for the login screen
+  };
 
   useEffect(() => {
     async function verificarLogin() {
       const token = await AsyncStorage.getItem('token');
-      if (token) {
-        navigation.replace('Tabs');
-      }
+     // if (token) {
+      //  navigation.replace('Tabs');
+     // }
       setCarregando(false);
     }
     verificarLogin();
   }, [navigation]);
 
+  async function getToken() {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        const decodedToken = jwtDecode(token);
+        const currentTime = Date.now() / 1000; // Tempo atual em segundos
+  
+        // Verificar se o token expirou
+        if (decodedToken.exp < currentTime) {
+          // Token expirou
+          console.log('Token expirou');
+          // Aqui você pode redirecionar o usuário para o login ou renovar o token
+        } else {
+          // Token ainda é válido
+          console.log('Token válido:', token);
+          // Aqui você pode configurar o token para ser usado em requisições subsequentes
+        }
+      } else {
+        console.log('Nenhum token encontrado');
+        // Redirecionar para o login
+      }
+    } catch (error) {
+      console.log('Erro ao recuperar o token:', error);
+    }
+  }
+
+  
   async function login() {
     const trimmedEmail = email.trim();
     const trimmedPassword = password.trim();
@@ -59,17 +91,51 @@ export default function Login({ navigation }: any) {
       });
       return;
     }
-
+  
     try {
-      const resultado = await fazerLogin({ Email: email, Password: password });
-       
-        await AsyncStorage.setItem('token', resultado.token);
-        const tokenDecodificado = jwtDecode<DecodedToken>(resultado.token);
-      
-        await AsyncStorage.setItem('id', tokenDecodificado.id);
-       
-        navigation.replace('Tabs');
-   
+      const resultado = await fazerLogin({ Email: trimmedEmail, Password: trimmedPassword });
+      await AsyncStorage.setItem('token', resultado);
+      const token = await AsyncStorage.getItem('token');
+      let role; // Declarar role fora do if para que seja acessível fora do bloco
+  
+      if (token) {
+        const decodedToken = jwtDecode(token);
+        const roleClaim = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+        role = decodedToken[roleClaim]; // Atribuir valor a role
+        console.log('Role:', role);
+      } else {
+        console.log('Nenhum token encontrado. Usuário não está logado.');
+        // Redirecionar para a tela de login ou lançar um erro
+        toast.show({
+          title: "Erro de autenticação",
+          description: "Não foi possível autenticar o usuário.",
+          backgroundColor: "red.500",
+        });
+        return; // Sair da função se não houver token
+      }
+  
+      // Agora o switch pode acessar a variável role
+      switch (role) {
+        case 'admin':
+          navigation.replace('AdminDashboard');
+          break;
+        case 'cliente':
+          navigation.replace('Tabs');
+          break;
+        case 'veterinario':
+          navigation.replace('VeterinarioPage');
+          break;
+        case 'secretario':
+          navigation.replace('SecretarioPage');
+          break;
+        default:
+          toast.show({
+            title: "Erro de acesso",
+            description: "Seu papel de usuário não permite acesso a esta área.",
+            backgroundColor: "red.500",
+          });
+          break;
+      }
     } catch (error) {
       toast.show({
         title: "Erro de conexão",
@@ -78,14 +144,14 @@ export default function Login({ navigation }: any) {
       });
     }
   }
-
+  
   if (carregando) {
     return null;
   }
 
   return (
     <VStack flex={1} alignItems="center" p={5}>
-      
+
       <Titulo color="blue.500">
         faça login em sua conta
       </Titulo>
@@ -96,7 +162,6 @@ export default function Login({ navigation }: any) {
           value={email}
           onChangeText={(text) => {
             setEmail(text);
-            console.log("Email text:", text); // Log the email input
           }}
         />
         <EntradaTexto
@@ -106,7 +171,6 @@ export default function Login({ navigation }: any) {
           value={password}
           onChangeText={(text) => {
             setSenha(text);
-            console.log("Password text:", text); // Log the password input
           }}
         />
       </Box>
